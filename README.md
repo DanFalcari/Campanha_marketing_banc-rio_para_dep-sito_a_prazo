@@ -3,7 +3,7 @@
 #### 📌 **Sobre o Projeto**  
 
 Este projeto analisa uma campanha de marketing feita por um banco para promover depósitos a prazo. O banco usou ligações telefônicas para entrar em contato com os clientes, e nosso objetivo é entender quais fatores influenciaram a decisão de aderir ou não à campanha. A análise foi feita com o **Bank Marketing Dataset**, disponível no Kaggle.                   
-https://www.kaggle.com/datasets/janiobachmann/bankmarketing-dataset/data
+(https://www.kaggle.com/datasets/janiobachmann/bank-marketing-dataset)
 
 ![imagem](imagens/00_depósito_a_prazo.PNG).                                                                                                                       
 Fonte: https://literciafinanceira.com/depositos-a-prazo-ou-certificados-de-aforro-em-2024-qual-compensa-mais/
