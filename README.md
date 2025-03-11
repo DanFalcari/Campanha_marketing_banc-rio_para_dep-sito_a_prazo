@@ -2,8 +2,7 @@
 
 #### 📌 **Sobre o Projeto**  
 
-Este projeto analisa uma campanha de marketing feita por um banco para promover depósitos a prazo. O banco usou ligações telefônicas para entrar em contato com os clientes, e nosso objetivo é entender quais fatores influenciaram a decisão de aderir ou não à campanha. A análise foi feita com o **Bank Marketing Dataset**, disponível no Kaggle. 
-
+Este projeto analisa uma campanha de marketing feita por um banco para promover depósitos a prazo. O banco usou ligações telefônicas para entrar em contato com os clientes, e nosso objetivo é entender quais fatores influenciaram a decisão de aderir ou não à campanha. A análise foi feita com o **Bank Marketing Dataset**, disponível no Kaggle.                   
 https://www.kaggle.com/datasets/janiobachmann/bankmarketing-dataset/data
 
 ![imagem](imagens/depósito_a_prazo.PNG).                                                                                                                       
