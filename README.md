@@ -1,72 +1,65 @@
-# Projeto de ETL com Azure, Databricks e Arquitetura Medallion
+### 📊 **Analisando a Campanha de Marketing do Banco**  
 
-## 📌 Descrição do Projeto
+#### 📌 **Sobre o Projeto**  
 
-Este projeto implementa um pipeline de **ETL (Extract, Transform, Load)** utilizando a **Arquitetura Medallion** no **Azure Databricks**, integrando diferentes serviços do Azure para ingestão, processamento e armazenamento de dados estruturados e não estruturados.
+Este projeto analisa uma campanha de marketing feita por um banco para promover depósitos a prazo. O banco usou ligações telefônicas para entrar em contato com os clientes, e nosso objetivo é entender quais fatores influenciaram a decisão de aderir ou não à campanha. A análise foi feita com o **Bank Marketing Dataset**, disponível no Kaggle. 
 
-![imagem](imagens/Medallion_Architecture.PNG)
-Fonte: https://blog.bismart.com/hs-fs/hubfs/Arquitectura_Medallion_Pasos.jpg?width=1754&height=656&name=Arquitectura_Medallion_Pasos.jpg
+![imagem](imagens/depósito_a_prazo.PNG)
+Fonte: https://literciafinanceira.com/depositos-a-prazo-ou-certificados-de-aforro-em-2024-qual-compensa-mais/
 
-##  Arquitetura Medallion
+Para conduzir essa análise, aplicamos a **metodologia dos seis passos da análise de dados**, estudada no curso do Google:  
 
-A **Arquitetura Medallion** organiza os dados em três camadas, garantindo qualidade e estruturação progressiva:
+1️⃣ **Ask (Perguntar):** Definição das principais questões a serem respondidas com base nos dados 
+2️⃣ **Prepare (Preparar):** Coleta e organização do banco de dados **Bank Marketing Dataset**, disponível no Kaggle.  
+3️⃣ **Process (Processar):** Limpeza e transformação dos dados para garantir sua qualidade.  
+4️⃣ **Analyze (Analisar):** Exploração dos dados, aplicação de estatísticas e criação de visualizações para identificar padrões.  
+5️⃣ **Share (Compartilhar):** Comunicação dos insights de forma clara e visual.  
+6️⃣ **Act (Agir):** Interpretação dos resultados e recomendações para otimizar futuras campanhas. 
 
-###  Camada Bronze (Raw Data)
+#### 🔎 **ASK - Perguntas Gerais Sobre a Campanha**  
 
-- Armazena os dados brutos exatamente como foram recebidos.
-- Mantém o histórico e possibilita reprocessamentos.
-- Dados provenientes de diferentes fontes são carregados no **Azure Data Lake Storage (Container)**.
-- Montagem da camada Bronze via **Databricks**:
+📌 **Qual é a taxa de sucesso geral da campanha?**  
 
-###  Camada Silver (Cleansed Data)
+📌 **Qual é o perfil demográfico dos clientes que mais aderiram (idade, profissão, estado civil, nível de educação)?**  
+ 
+## 📌 Objetivo
+O objetivo deste projeto é identificar os principais fatores que influenciam os clientes a aderirem à campanha e depositarem dinheiro em uma conta a prazo.
 
-- Processamento e limpeza dos dados utilizando **Azure Databricks** (Apache Spark).
-- Remoção de valores inconsistentes, duplicados e transformação dos tipos de dados.
-- Os dados são armazenados em **Azure SQL Database** e **Azure Data Lake Storage**.
+## 🗂 Estrutura do Projeto
 
-###  Camada Gold (Refined Data)
+- `bank_marketing_analysis.Rmd`: Código e análise completa em RMarkdown.
+- `bank_marketing_analysis.R`: Código principal em R.
+- `data/`: Contém a base de dados original e tratada.
+- `reports/`: Relatório em PDF com os resultados e insights.
+- `visualizations/`: Gráficos gerados para a análise.
 
-- Contém dados agregados e enriquecidos para análise e visualização.
-- Prontos para consumo por **Power BI**, relatórios e modelos preditivos.
+## 🛠 Ferramentas Utilizadas
 
-##  Tecnologias e Serviços Utilizados
+- 📌 **R** (ggplot2, dplyr, caret)
+- 📌 **RStudio**
+- 📌 **Kaggle** (Fonte do dataset)
+- 📌 **GitHub** (Compartilhamento do código)
 
-###  **Azure Resources**
+### 📌 **Principais Insights Obtidos**  
 
-- **Azure Resource Group**: Agrupamento dos recursos para melhor gerenciamento.
-- **Azure Storage Account**: Armazena dados brutos na camada Bronze.
-- **Azure Databricks**: Plataforma para processamento distribuído e transformação de dados.
-- **Azure SQL Database**: Armazena dados transformados na camada Silver.
-- **Azure Container Instances**: Para orquestração de execução de jobs de ETL.
-- **Azure Key Vault**: Gerenciamento seguro de credenciais.
+Com base na análise dos dados, identificamos o perfil do cliente com maior probabilidade de aderir ao depósito a prazo. Esses insights podem ser usados para direcionar futuras campanhas de marketing, aumentando sua eficácia.  
 
-###  **Ferramentas e Linguagens**
+📌 **📈 Perfil do Cliente Ideal para Depósito a Prazo:**  
 
-- **Python (Pandas, PySpark)**
-- **SQL (Azure SQL, SQL Database)**
-- **Apache Spark (Databricks Notebooks)**
+✔ **Idade**: Clientes idosos (60 a 95 anos) e jovens (18 a 23 anos) demonstraram maior interesse na oferta.  
 
-##  Fluxo de Processamento ETL
+✔ **Profissão**: Estudantes e aposentados foram os grupos que mais aceitaram a proposta.  
 
-1. **Extração (Extract)**: Coleta de dados de diversas fontes e armazenamento na camada Bronze (Azure Data Lake Storage).
-2. **Transformação (Transform)**: Processamento com Databricks para limpeza, tratamento e enriquecimento dos dados.
-3. **Carga (Load)**: Armazenamento dos dados refinados na camada Gold para análise e consumo.
-4. **Envio para o Azure SQL Database**:
+✔ **Estado Civil**: Solteiros tiveram uma maior taxa de adesão em comparação com casados e divorciados.  
 
-##Como Executar o Projeto
+✔ **Escolaridade**: Pessoas com ensino superior demonstraram maior propensão a aceitar o depósito a prazo.  
 
-1. **Criar os Recursos no Azure:**
-- Criar um **Resource Group** e uma **Storage Account**.
-- Configurar um **Azure SQL Database**.
-- Provisionar um **Databricks Workspace**.
-     
-2. **Configurar o Databricks:**
-- Criar Clusters e Notebooks.
-- Conectar ao **Azure Data Lake Storage**.
-- Instalar bibliotecas necessárias (PySpark, Pandas, Delta Lake).
-     
-3. **Rodar os Scripts ETL:**
-- Executar notebooks para ingestão de dados (Bronze → Silver → Gold).
+✔ **Saldo Bancário**: Clientes com saldos mais altos tendem a aderir mais facilmente ao produto.  
+
+✔ **Histórico Financeiro**: Clientes sem dívidas ou empréstimos (pessoais e imobiliários) foram os que mais aceitaram a oferta.  
+
+🔎 **Conclusão:**  
+A análise mostra que clientes **mais jovens e mais velhos**, com **bom histórico financeiro** e **nível educacional mais alto**, são os mais propensos a aderir ao produto. Com essas informações, o banco pode **personalizar as abordagens de marketing**, focando nesses grupos para aumentar a taxa de conversão. 
 
 
 ## Organização do projeto
