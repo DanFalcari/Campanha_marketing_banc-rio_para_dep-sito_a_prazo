@@ -13,12 +13,11 @@ Fonte: https://literciafinanceira.com/depositos-a-prazo-ou-certificados-de-aforr
 Para conduzir essa análise, aplicamos a **metodologia dos seis passos da análise de dados**, estudada no curso do Google:  
 
 1️⃣ **Ask (Perguntar):** Definição das principais questões a serem respondidas com base nos dados.
-
 2️⃣ **Prepare (Preparar):** Coleta e organização do banco de dados **Bank Marketing Dataset**, disponível no Kaggle.  
 3️⃣ **Process (Processar):** Limpeza e transformação dos dados para garantir sua qualidade.  
 4️⃣ **Analyze (Analisar):** Exploração dos dados, aplicação de estatísticas e criação de visualizações para identificar padrões.  
 5️⃣ **Share (Compartilhar):** Comunicação dos insights de forma clara e visual.  
-6️⃣ **Act (Agir):** Interpretação dos resultados e recomendações para otimizar futuras campanhas. 
+6️⃣ **Act (Agir):** Interpretação dos resultados e recomendações para otimizar futuras campanhas.  
 
 #### 🔎 **ASK - Perguntas Gerais Sobre a Campanha**  
 
