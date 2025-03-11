@@ -96,5 +96,5 @@ A análise mostra que clientes **mais jovens e mais velhos**, com **bom históri
 1. Faça o clone do repositório.
 
     ```bash
-    git@github.com:DanFalcari/ETL_Pipeline_Azure_Databricks.git
+    git@github.com:DanFalcari/Campanha_marketing_bancario_para_deposito_a_prazo.git
     ```
