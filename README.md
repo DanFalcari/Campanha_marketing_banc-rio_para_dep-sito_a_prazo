@@ -68,27 +68,20 @@ A análise mostra que clientes **mais jovens e mais velhos**, com **bom históri
 ## Organização do projeto
 
 ```
-
-├── .gitignore         <- Arquivos e diretórios a serem ignorados pelo Git
-├── ambiente.yml       <- O arquivo de requisitos para reproduzir o ambiente de análise
-├── LICENSE            <- Licença de código aberto (MIT)
-├── README.md          <- README principal para desenvolvedores que usam este projeto.
+├── LICENSE                              <- Licença de código aberto (MIT)
 |
-├── dados              <- Arquivos de dados para o projeto.
+├── README.md                            <- README principal para desenvolvedores que usam este projeto.
 |
+├── Dados                                <- Arquivos de dados para o projeto contendo o dataset.
 |
-├── notebooks          <- Jupyter Notebooks com tratamento e análise dos dados.
+├── Projeto_linguagem_RMarkdown          <- Contém o código do projeto.
 │
-|   └──src             <- Código-fonte para uso neste projeto.
-|      │
-|      ├── __init__.py  <- Torna um módulo Python
-|      └──config.py    <- Configurações básicas do projeto
-|    
+├── Relatório                            <- Arquivo em pdf contendo o relatório da análise completa.   
 |
-├── referencias        <- Dicionários de dados
+├── referencias                          <- Dicionários de dados
 |
-├── relatorios         <- Análises geradas em HTML, PDF, LaTeX, etc.
-│   └── imagens        <- Imagens usadas no projeto
+├── imagens                              <- Imagens usadas no projeto e imagens criadas usando o ggplot
+│           
 ```
 
 ## Configuração do ambiente
