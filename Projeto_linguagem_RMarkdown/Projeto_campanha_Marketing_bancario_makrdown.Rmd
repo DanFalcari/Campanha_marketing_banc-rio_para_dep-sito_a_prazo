@@ -1,0 +1,1020 @@
+---
+title: "Análise Campanha de Markething Bancário"
+author: "Daniel Falcari"
+date: "2025-01-30"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Projeto de Análise de Campanha de Marketing Bancário
+
+### Bank Marketing Dataset
+É um conjunto de dados, disponível no Kaggle. Ele se refere a uma campanha de marketing direto de uma instituição bancária, cujo objetivo era identificar clientes que poderiam se interessar por um produto financeiro específico: um depósito a prazo (deposit). O dataset foi utilizado analisar se um cliente subscreverá (ou não) o depósito a prazo com base em suas características demográficas.
+
+Vamos usar o dataset do Kaggle: Bank Marketing
+https://www.kaggle.com/datasets/janiobachmann/bank-marketing-dataset/data
+
+Abaixo, detalho as principais informações sobre o dataset.
+
+### Colunas e Valores Presentes
+O dataset contém várias colunas (atributos) que descrevem características dos clientes, detalhes da campanha de marketing e informações contextuais. Aqui estão as colunas e seus significados:
+
+#### Informações Demográficas dos Clientes:
+
+`age:` Idade do cliente (numérica).
+
+`job:` Tipo de emprego (categórica: admin, blue-collar, entrepreneur, housemaid, management, retired, self-employed, services, student, technician, unemployed, unknown).
+
+`marital:` Estado civil (categórica: divorced, married, single).
+
+`education:` Nível de educação (categórica: primary, secondary, tertiary, unknown).
+
+`default:` Indica se o cliente tem crédito em inadimplência (categórica: no, yes, unknown).
+
+`balance:` Saldo médio anual em euros (numérica).
+
+`housing:` Indica se o cliente tem um empréstimo imobiliário (categórica: no, yes, unknown).
+
+`loan:` Indica se o cliente tem um empréstimo pessoal (categórica: no, yes, unknown).
+
+#### Informações Relacionadas à Campanha de Marketing:
+
+`contact:` Tipo de comunicação utilizada (categórica: cellular, telephone).
+
+`day:` Último dia do mês em que o cliente foi contatado (numérica: 1 a 31).
+
+`month:` Último mês em que o cliente foi contatado (categórica: jan, feb, mar, ..., nov, dec).
+
+`duration:` Duração do último contato em segundos (numérica). (Nota: Este atributo não deve ser usado para treinamento, pois só é conhecido após o contato.)
+
+`campaign:` Número de contatos realizados durante esta campanha para este cliente (numérica).
+
+`pdays:` Número de dias desde o último contato de uma campanha anterior (numérica: -1 indica que o cliente não foi contatado anteriormente).
+
+`previous:` Número de contatos realizados antes desta campanha (numérica).
+
+`poutcome:` Resultado da campanha de marketing anterior (categórica: failure, nonexistent, success).
+
+#### Variável Alvo (Target):
+
+`deposit:` Indica se o cliente subscreveu o depósito a prazo (categórica: yes, no). (Esta é a variável que se deseja prever.)
+
+
+### ASK - Perguntas Gerais Sobre a Campanha 
+
+Qual é a taxa de sucesso geral da campanha?
+
+Qual é o perfil demográfico dos clientes que mais aderiram (idade, profissão, estado civil, nível de educação)?
+
+
+### PREPARE - IMPORTANDO E ENTENDENDO A BASE 
+```{r PREPARE, warning=FALSE}
+# Verificando o caminho padrão do RStudio
+getwd()
+# Definindo o caminho onde está salvo o banco de dados 
+# Obs: Inverter as barras ("\") para ("/") não ocorrer erro 
+setwd("C:/Users/LATITUDE/Documents/Linguagem_R/Dataset")
+
+# Importando o dplyr e o tidyr
+library(dplyr)
+library(tidyr)
+
+# Importando o ggplot2 e forcats
+library(ggplot2)
+library(forcats)
+
+# Importando o dataset dos dados da campanha de marketing
+dados_bank <- read.csv('bank.csv')
+colnames(dados_bank)
+
+# Visualizando as primeiras linhas
+head(dados_bank, 10)
+
+# Verificando a estrutra desse dataset
+str(dados_bank)
+
+# Verificando também a descrição estatística
+summary(dados_bank)
+
+# Vamos verificar se existe algum valor vazio no banco de dados
+any(is.na(dados_bank))
+
+# E quais são as colunas com valores vazios
+colSums(is.na(dados_bank))
+
+# Verificando se possui dados duplicados na base 
+duplicated_data <- dados_bank[duplicated(dados_bank), ]
+print(duplicated_data)
+
+```
+
+### PROCESS - MANIPULAÇÃO E LIMPEZA DOS DADOS 
+```{r PROCESS, warning=FALSE}
+
+# Renomeando algumas colunas do dataset
+dados_bank <- dados_bank %>%
+  rename(
+    type_contact = contact,
+    housing_loan = housing,
+    marital_status = marital
+  )
+
+# Verificando os valores distintos nessas colunas
+distinct(dados_bank, job)
+distinct(dados_bank, marital_status)
+distinct(dados_bank, education)
+distinct(dados_bank, default)
+distinct(dados_bank, housing_loan)
+distinct(dados_bank, loan)
+distinct(dados_bank, type_contact)
+distinct(dados_bank, poutcome)
+distinct(dados_bank, deposit)
+
+# Verificando os valores em cada um desses rótulos
+table(dados_bank$poutcome)
+table(dados_bank$job)
+
+# Agrupando na coluna poutcome "other" e "unknown" em "unknown" na coluna poutcome
+dados_bank <- dados_bank %>%
+  mutate(poutcome= ifelse(poutcome %in% c("other", "unknown"), "unknown", poutcome))
+
+# Resumo estatístico da Distribuição demográfica em relação a coluna target
+table(dados_bank$marital_status, dados_bank$deposit)
+table(dados_bank$education, dados_bank$deposit)
+table(dados_bank$job, dados_bank$deposit)
+```
+
+### ANALYZE - ANALISANDO E VISUALIZANDO INFORMAÇÕES
+
+Respondendo a primeira pergunta: Qual é a taxa de sucesso geral da campanha? 
+Para isso será realizado o cálculo da porcentagem dos clientes que realizaram 
+e dos que não realizarm o depósito, apresentando o resultado em um gráfico de 
+pizza.
+
+```{r ANALYZE_1, warning=FALSE}
+# Obtendo os dados de porcentagem de quantos clientes fizeram o depósito a prazo
+dados_pizza <- dados_bank %>%
+  group_by(deposit) %>% # Agrupa os dados por "deposit"
+  summarise(count = n()) %>% # Conta o número de ocorrências
+  mutate(percentage = round(100 * count / sum(count), 1)) # Calcula a porcentagem
+
+print(dados_pizza)
+
+
+# Adicionar uma coluna para adicionar o símbolo de porcentagem
+dados_pizza <- dados_pizza %>%
+  mutate(label = paste0(percentage, "%"))
+
+# Criar o gráfico de pizza para mostrar a porcentagem de quem fez ou não o depósito a prazo
+grafico_pizza <- ggplot(dados_pizza, aes(x = "", y = percentage, fill = deposit)) +
+  geom_bar(width = 1, stat = "identity", color = "white") +
+  coord_polar("y", start = 0) + # Iniciar em 0 para uma apresentação mais limpa
+  geom_text(aes(label = label), position = position_stack(vjust = 0.5), color = "black", size = 5) +
+  theme_void() + # Tema minimalista sem eixos e grid
+  scale_fill_manual(
+    values = c("yes" = "lightgreen", "no" = "tomato"),
+    name = "Depósito",
+    labels = c("yes" = "Sim", "no" = "Não")
+  ) + # Personalizar cores, nome da legenda e rótulos
+  labs(title = "Depósitos a Prazo: Porcentagens") +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  ) 
+
+# Exibir o gráfico
+print(grafico_pizza)
+```
+
+#### A taxa de sucesso da campanha baseada no dados foi de 47,4%
+
+## Analisando os dados como objetivo de responder a segunda pergunta 
+
+Qual é o perfil demográfico dos clientes que mais aderiram?
+
+### Analisando a Idade
+
+```{r ANALYZE_2, warning=FALSE}
+# Estatísticas descritivas da idade
+summary(dados_bank$age)
+
+# Média e desvio padrão
+sd(dados_bank$age)
+
+# Filtrando os clientes que aderiram à campanha (deposit = 'yes')
+dados_adquiridos <- dados_bank %>% filter(deposit == "yes")
+
+# Filtrando os clientes que NÃO aderiram à campanha (deposit = 'no')
+dados_no_adquiridos <- dados_bank %>% filter(deposit == "no")
+
+# Estatísticas descritivas da idade dos que realizaram o depósito
+summary(dados_adquiridos$age)
+
+# Média e desvio padrão dos que realizaram o depósito
+mean(dados_adquiridos$age)
+sd(dados_adquiridos$age)
+
+# Calcular as porcentagens de depósitos a prazo por faixa etária
+faixas_etarias <- dados_bank %>%
+  mutate(faixa_etaria = cut(age, breaks = seq(17, 95, by = 6))) %>%  # Ajuste os intervalos conforme necessário
+  group_by(faixa_etaria) %>%
+  summarise(
+    total = n(),
+    depositaram = sum(deposit == "yes"),
+    porcentagem = (depositaram / total) * 100
+  ) %>% 
+  arrange(desc(porcentagem))
+
+# Exibir os resultados
+print(faixas_etarias)
+
+
+# Histograma de distribuição de idade separando por quem fez o depósito a prazo
+ggplot(dados_bank, aes(x = age)) +
+  geom_histogram(binwidth = 6, aes(fill = deposit), alpha = 0.7, color=      "black") +
+  labs(
+    title = "Histograma de idades e frequência de depósitos a prazo", 
+    x = "Idades", 
+    y = NULL  # Remove o rótulo do eixo Y
+  ) +
+  scale_fill_manual(
+    values = c("yes" = "lightgreen", "no" = "tomato"),
+    name = "Depósito",
+    labels = c("yes" = "Sim", "no" = "Não")
+  ) +
+  theme_minimal()
+```
+
+### Percepções das Análises em Relação à Idade
+
+#### Insights 
+
+- **Clientes Idosos (60 a 95 anos):** Impressionantes 81% deste grupo realizaram depósitos a prazo
+- **Jovens (18 a 23 anos):** Uma significativa parcela de 74,3% deste segmento fez depósitos a prazo
+- **Jovens Adultos (24 a 29 anos):** Aproximadamente 57,8% dos jovens adultos optaram por depósitos a prazo
+- **Adultos (36 a 59 anos):** Esta faixa etária apresentou o pior desempenho na campanha, com apenas 41,6% realizando depósitos a prazo. 
+
+### Analisando as Profissões
+
+
+```{r ANALYZE_3, warning=FALSE, fig.width=12, fig.height=8, out.width='100%'}
+# Tabela de frequências para análise das profissões
+table(dados_bank$job)
+table(dados_adquiridos$job)
+
+# Cálculo da porcentagem de cada profissão dos clientes com base no depósito a prazo (coluna target) 
+job_porcentagem <- dados_bank %>%
+  group_by(job, deposit) %>%
+  summarise(frequencia = n()) %>%
+  mutate(percentual = frequencia / sum(frequencia) * 100)
+
+print(job_porcentagem)
+
+# Reorganizar a variável 'job' em ordem decrescente
+dados_bank <- dados_bank %>%
+  mutate(job = fct_infreq(job))
+
+# Criar o gráfico de profissões dos clientes com o depósito a prazo (coluna target)
+job_graf <- ggplot(dados_bank, aes(x = job, fill = deposit)) +
+  geom_bar(position = position_dodge(width = 0.9), alpha = 0.8, color = "black") +
+  geom_text(
+    stat = "count", 
+    aes(label = ..count..), 
+    position = position_dodge(width = 0.95), 
+    vjust = -0.5, 
+    size = 3.5
+  ) +
+  labs(
+    title = "Distribuição por Profissão", 
+    x = NULL, 
+    y = NULL  # Remove o rótulo do eixo Y
+  ) +
+  scale_y_continuous(breaks = NULL) +  # Remove os valores no eixo Y
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 65, size = 11, vjust = 0.8, hjust = 0.5),  # Aumenta o tamanho e ajusta posição
+    panel.grid.major.y = element_blank(),  # Remove as linhas de grade horizontais
+    axis.title.x = element_text(size = 14),
+    plot.title = element_text(hjust = 0.5)
+  ) +
+  scale_fill_manual(
+    values = c("yes" = "lightgreen", "no" = "tomato"),
+    name = "Depósito",
+    labels = c("yes" = "Sim", "no" = "Não")                  
+  ) +
+  scale_x_discrete(
+    labels = c("admin" = "Administrador", "blue-collar" = "Operário",
+    "entrepreneur" = "Empreendedor", "housemaid" = "Empregada\nDoméstica",
+    "management" = "Gerente", "retired" = "Aposentado",
+    "self-employed" = "Autônomo", "services" = "Prestação\nServiço",
+    "student" = "Estudante", "technician" = "Técnico", "unemployed" =  "Desempregado", "unknown" = "Não\nInformado")
+  )
+
+print(job_graf)
+
+# Filtrar apenas os casos onde deposit = "yes"
+job_yes <- job_porcentagem %>%
+  filter(deposit == "yes") %>%
+  arrange(desc(percentual))  # Ordenar do maior para o menor percentual
+
+print(job_yes)
+
+# Criar o gráfico com porcentagens,  relacionando as profissões dos clientes com o depósito a prazo (coluna target) 
+ggplot(job_yes, aes(x = reorder(job, -percentual), y = percentual)) +
+  geom_bar(stat = "identity", fill = "lightgreen", position = position_dodge(width = 0.9), alpha = 0.8, color = "black") +
+  geom_text(
+    aes(label = paste0(round(percentual, 0), "%")), 
+    position = position_dodge(width = 0.95), 
+    vjust = -0.5, 
+    size = 5
+  ) +
+  labs(
+    title = "Distribuição por Profissão dos clientes que fizaram o Depósito a Prazo (porcentagem)", 
+    x = NULL, 
+    y = NULL,
+  ) +
+  scale_y_continuous(breaks = NULL, expand = expansion(mult = c(0, 0.1))) +  # Ajusta o espaço acima das barras
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 65, size = 12, vjust = 0.3, hjust = 0.3),  # Aumenta e ajusta rótulos do eixo X
+    panel.grid.major.y = element_blank(),  # Remove as linhas do grid horizontal
+    plot.title = element_text(hjust = 0.5, size = 16)
+  ) +
+  scale_fill_manual(
+    values = c("yes" = "lightgreen"),
+    name = "Depósito",
+    labels = c("yes" = "Sim")                  
+  ) +
+  scale_x_discrete(
+    labels = c("admin" = "Administrador", "blue-collar" = "Operário",
+    "entrepreneur" = "Empreendedor", "housemaid" = "Empregada\nDoméstica",
+    "management" = "Gerente", "retired" = "Aposentado",
+    "self-employed" = "Autônomo", "services" = "Prestação\nServiço",
+    "student" = "Estudante", "technician" = "Técnico", "unemployed" = "Desempregado", "unknown" = "Não\nInformado")
+  )
+
+
+```
+
+### Percepções das Análises em Relação às Profissões
+
+#### Insights:
+
+**Estudantes:** Com uma alta taxa de conversão de 74,7%, embora representem apenas 3% da base de dados, os estudantes mostram um forte interesse em investir, mesmo sendo um grupo menor.
+
+**Aposentados:** Apresentam uma taxa de conversão de 66,3%, representando 7% da base de dados. Esse grupo demonstra uma propensão significativa para investir em opções de longo prazo, possivelmente devido à estabilidade financeira adquirida ao longo dos anos.
+
+**Desempregados:** Apesar de representarem 3% da base de dados, possuem uma conversão de 56,6%. Isso sugere que, mesmo sem uma fonte de renda estável, há um interesse em investir.
+
+**Gerentes:** Com uma taxa de conversão de 50,7%, representam 23% da base de dados. Isso indica um bom interesse em depósitos a prazo 
+
+**Operários:** Este grupo possui a menor taxa de conversão, 36,4%, e representa 17,5% da base de dados. Isso sugere menor acesso a interesse sobre investimentos, indicando a necessidade de estratégias específicas para aumentar a adesão.
+
+### Analisando o Estado Civil 
+```{r ANALYZE_4, warning=FALSE}
+
+# Tabela de frequências para o estado civil
+table(dados_bank$marital_status)
+table(dados_adquiridos$marital_status)
+
+# Calcule a porcentagem de depósitos a prazo por estado civil
+resultados_marital <- dados_bank %>%
+  group_by(marital_status) %>%
+  summarise(
+    total = n(),
+    depositaram = sum(deposit == "yes"),
+    nao_depositaram = total - depositaram,
+    porcentagem = (depositaram / total) * 100
+  ) %>% 
+  arrange(desc(porcentagem))
+
+# Exiba os resultados
+print(resultados_marital)
+
+# Reorganizar a variável 'maritial_status' em ordem decrescente
+dados_bank <- dados_bank %>%
+  mutate(marital_status = fct_infreq(marital_status))
+
+# Criar o gráfico com relacionando o estádo civil com o depósito a prazo (coluna target)
+ggplot(dados_bank, aes(x = marital_status, fill = deposit)) +
+  geom_bar(position = position_dodge(width = 0.9), alpha = 0.8, color = "black") +
+  geom_text(
+    stat = "count", 
+    aes(label = ..count..), 
+    position = position_dodge(width = 0.8), 
+    vjust = -0.5, 
+    size = 4
+  ) +
+  labs(
+    title = "Distribuição por Estado Civil", 
+    x = NULL, 
+    y = NULL  # Remove o rótulo do eixo Y
+  ) +
+  scale_y_continuous(breaks = NULL) +  # Remove os valores no eixo Y
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 12, vjust = 0.9, hjust = 0.5,),  
+    panel.grid.major.y = element_blank(),  # Remove as linhas de grade horizontais
+    axis.title.x = element_text(size = 14), # Aumenta o título do eixo X
+    plot.title = element_text(hjust = 0.5)
+  ) +
+  scale_fill_manual(
+    values = c("yes" = "lightgreen", "no" = "tomato"),
+    name = "Depósito",
+    labels = c("yes" = "Sim", "no" = "Não")                  
+  ) +
+  scale_x_discrete(
+    labels = c("married" = "Casado", "single" = "Solteiro", "divorced" = "Divorciado")
+  ) 
+
+
+# Calcular as porcentagens de quem fez e de quem não fez o depósito a prazo de acordo com o estado civil
+marital_porcentagem <- dados_bank %>%
+  group_by(marital_status, deposit) %>%
+  summarise(frequencia = n()) %>%
+  mutate(percentual = frequencia / sum(frequencia) * 100)
+
+print(marital_porcentagem)
+
+# Criar o gráfico com porcentagens,  relacionando o estádo civil com o depósito a prazo (coluna target)
+ggplot(marital_porcentagem, aes(x = marital_status, y = percentual, fill = deposit)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), alpha = 0.8, color = "black") +
+  geom_text(
+    aes(label = paste0(round(percentual, 1), "%")), 
+    position = position_dodge(width = 0.8), 
+    vjust = -0.5, 
+    size = 4
+  ) +
+  labs(
+    title = "Distribuição por Estado Civil (porcentagem)", 
+    x = NULL, 
+    y = NULL
+  ) +
+  scale_y_continuous(breaks = NULL) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 12, vjust = 0.5, hjust = 0.5),  # Aumenta e ajusta rótulos do eixo X
+    panel.grid.major.y = element_blank(),  # Remove as linhas do grid horizontal
+    plot.title = element_text(hjust = 0.5)
+  ) +
+  scale_fill_manual(
+    values = c("yes" = "lightgreen", "no" = "tomato"),
+    name = "Depósito",
+    labels = c("yes" = "Sim", "no" = "Não")                  
+  ) +
+  scale_x_discrete(
+    labels = c("married" = "Casado", "single" = "Solteiro", "divorced" = "Divorciado")
+  )
+
+```
+
+### Percepções das Análises em Relação ao Estado Civil
+
+#### Insights:
+
+**Solteiros:** Apresentam a maior taxa de conversão de 54,3%, representando 31,5% da base de dados. Isso indica que este grupo está mais inclinado a investir, possivelmente devido a menos compromissos financeiros.
+
+**Divorciados:** Com uma taxa de conversão de 48,1%, representam 11,6% da base de dados. Isso sugere que, apesar dos desafios financeiros que possam enfrentar, ainda estão dispostos a investir em depósitos a prazo.
+
+**Casados:** Possuem a menor taxa de conversão de 43,4%, representando 56,9% da base de dados. Este grupo pode estar mais focado em outras prioridades financeiras, o que sugere a necessidade de estratégias específicas para aumentar o interesse em depósitos a prazo.
+
+
+### Analisando a Escolaridade
+
+```{r ANALYZE_5, warning=FALSE}
+# Tabela de frequências para o nível educacional
+table(dados_bank$education)
+table(dados_adquiridos$education)
+
+# Cálculo da porcentagem pela escolaridade dos clientes com base no depósito a prazo (coluna target) 
+education_porcentagem <- dados_bank %>%
+  group_by(education, deposit) %>%
+  summarise(frequencia = n()) %>%
+  mutate(percentual = frequencia / sum(frequencia) * 100)
+
+print(education_porcentagem)
+
+# Reorganizar a variável 'education' em ordem decrescente
+#dados_bank <- dados_bank %>%
+#  mutate(education = fct_infreq(education))
+
+# Criar o gráfico da escolaridade dos clientes com base no depósito a prazo (coluna target)
+ggplot(dados_bank, aes(x = education, fill = deposit)) +
+  geom_bar(position = position_dodge(width = 0.9), alpha = 0.8, color = "black") +
+  geom_text(
+    stat = "count", 
+    aes(label = ..count..), 
+    position = position_dodge(width = 0.8), 
+    vjust = -0.5, 
+    size = 4
+  ) +
+  labs(
+    title = "Distribuição por Escolaridade\n", 
+    x = NULL, 
+    y = NULL  # Remove o rótulo do eixo Y
+  ) +
+  scale_y_continuous(breaks = NULL) +  # Remove os valores no eixo Y
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 12, vjust = 0.9, hjust = 0.5,),  # Aumenta o tamanho e ajusta posição
+    panel.grid.major.y = element_blank(),  # Remove as linhas de grade horizontais
+    axis.title.x = element_text(size = 14),
+    plot.title = element_text(hjust = 0.5)
+  ) +
+  scale_fill_manual(
+    values = c("yes" = "lightgreen", "no" = "tomato"),
+    name = "Depósito",
+    labels = c("yes" = "Sim", "no" = "Não")                  
+  ) +
+  scale_x_discrete(
+    labels = c("unknown" = "Não Informado", "primary" = "Fundamental",
+               "secondary" = "Médio", "tertiary" = "Superior")
+  ) 
+
+# Criar o gráfico com porcentagens,  relacionando a escolaridade dos clientes com base no depósito a prazo (coluna target)
+ggplot(education_porcentagem, aes(x = education, y = percentual, fill = deposit)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), alpha = 0.8, color = "black") +
+  geom_text(
+    aes(label = paste0(round(percentual, 1), "%")), 
+    position = position_dodge(width = 0.8), 
+    vjust = -0.5, 
+    size = 4
+  ) +
+  labs(
+    title = "Distribuição por Escolaridade (porcentagem)\n", 
+    x = NULL, 
+    y = NULL,
+  ) +
+  scale_y_continuous(breaks = NULL, expand = expansion(mult = c(0, 0.1))) +  # Ajusta o espaço acima das barras
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 12, vjust = 0.5, hjust = 0.5),  # Aumenta e ajusta rótulos do eixo X
+    panel.grid.major.y = element_blank(),  # Remove as linhas do grid horizontal
+    plot.title = element_text(hjust = 0.5)
+  ) +
+  scale_fill_manual(
+    values = c("yes" = "lightgreen", "no" = "tomato"),
+    name = "Depósito",
+    labels = c("yes" = "Sim", "no" = "Não")                  
+  ) +
+  scale_x_discrete(
+    labels = c("unknown" = "Não Informado", "primary" = "Fundamental",
+               "secondary" = "Médio", "tertiary" = "Superior")
+  ) 
+
+```
+
+### Percepções das Análises em Relação à Escolaridade
+#### Insights:
+
+**Ensino Superior (Tertiary):** Clientes com nível de escolaridade superior apresentaram uma taxa de conversão de 54,1%. Isso indica que quanto maior o nível de escolaridade, maior a propensão para investir em depósitos a prazo.
+
+**Ensino Médio (Secondary):** Com uma taxa de conversão de 44,7%, os clientes com ensino médio também demonstraram um interesse significativo em depósitos a prazo, embora menor do que aqueles com ensino superior.
+
+**Ensino Fundamental (Primary):** Este grupo apresentou uma taxa de conversão de 39,4%. Apresentando o menor percentual entre os níveis de escolaridade conhecidos.
+
+**Desconhecido (Unknown):** Clientes com escolaridade não especificada tiveram uma taxa de conversão de 50,7%, o que é relativamente alta e destaca a importância de entender melhor este grupo para direcionar estratégias de marketing.
+
+
+### Analisando Saldo Bancário Médio Anual 
+
+```{r ANALYZE_6, warning=FALSE}
+# Analisando os dados estatísticos do saldo bancário médio anual 
+summary(dados_bank$balance)
+
+# Obter resumo estatístico do saldo bancário médio anual para depósitos "yes"
+summary(dados_adquiridos$balance)
+
+# Obter resumo estatístico do saldo bancário médio anual para depósitos "no"
+summary(dados_no_adquiridos$balance)
+
+
+# boxplot do saldo bancário médio anual em relação a realização ou não do depósito a prazo 
+ggplot(dados_bank, aes(x = deposit, y = balance, fill = deposit)) +
+  geom_boxplot(outlier.shape = NA) +  # Remove os outliers para melhor visualização
+  coord_cartesian(ylim = c(quantile(dados_bank$balance, 0.05),   quantile(dados_bank$balance, 0.95))) +  
+  labs(title = "Boxplot do Saldo Bancário Médio Anual por Depósito a Prazo (Sem Outliers)",
+       x = NULL,
+       y = "Saldo Bancário") +
+  scale_fill_manual(
+    values = c("tomato", "lightgreen"),
+    name = "Depósito",
+    labels = c("yes" = "Sim", "no" = "Não") 
+  ) +
+  scale_x_discrete(labels = NULL) +
+  theme_minimal()
+
+```
+
+### Percepções das Análises em Relação ao Saldo Bancário Médio Anual
+
+#### Insights:
+
+**Clientes com Saldos Bancários Mais Altos:**  Têm uma maior probabilidade de aderir ao depósito a prazo, sugerindo que aqueles com mais recursos financeiros são mais propensos a investir.
+
+**Mediana do Saldo:** A mediana confirma que clientes com saldos mais altos são mais propensos a aderir ao depósito a prazo.
+
+**Quartis:**
+
+- **Q1 (25% dos Clientes):** 25% dos clientes que aderiram ao depósito têm saldo acima de 210, enquanto apenas 25% dos que não aderiram têm saldo acima de 64. Isso demonstra uma clara tendência de clientes com saldos mais altos serem mais propensos a investir.
+
+- **Q3 (75% dos Clientes):** 75% dos clientes que aderiram ao depósito têm saldo abaixo de 2.159, enquanto 75% dos que não aderiram têm saldo abaixo de 1.324. Isso reforça que saldos mais altos estão associados a uma maior probabilidade de adesão.
+
+**Conclusão Geral:** Saldos mais altos estão fortemente associados à adesão ao depósito a prazo, enquanto clientes com saldos mais baixos ou negativos têm menor probabilidade de aderir.
+
+
+### Analisando Clientes Inadimplentes e Adimplentes
+
+```{r ANALYZE_7, warning=FALSE}
+# Tabela dos clientes que Inadimplêntes 
+table(dados_bank$default)
+table(dados_adquiridos$default)
+
+# Calcule a porcentagem de depósitos a prazo por Inadimplência
+resultados_default <- dados_bank %>%
+  group_by(default) %>%
+  summarise(
+    total = n(),
+    depositaram = sum(deposit == "yes"),
+    nao_depositaram = total - depositaram,
+    porcentagem = (depositaram / total) * 100
+  ) %>% 
+  arrange(desc(porcentagem))
+
+# Exiba os resultados
+print(resultados_default)
+
+# Reorganizar a variável 'default' em ordem decrescente
+dados_bank <- dados_bank %>%
+  mutate(default = fct_infreq(default))
+
+# Cálculo da porcentagem de inadimplência ou não dos clientes com o depósito a prazo (coluna target) 
+default_porcentagem <- dados_bank %>%
+  group_by(default, deposit) %>%
+  summarise(frequencia = n()) %>%
+  mutate(percentual = frequencia / sum(frequencia) * 100)
+
+print(default_porcentagem)
+
+# Criar o gráfico com porcentagens,  relacionando a inadimplência ou não dos clientes com o depósito a prazo (coluna target) 
+ggplot(default_porcentagem, aes(x = default, y = percentual, fill = deposit)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), alpha = 0.8, color = "black") +
+  geom_text(
+    aes(label = paste0(round(percentual, 1), "%")), 
+    position = position_dodge(width = 0.8), 
+    vjust = -0.5, 
+    size = 4
+  ) +
+  labs(
+    title = "Distribuição por Inadimplência e Adimplente (porcentagem)", 
+    x = NULL, 
+    y = NULL,
+  ) +
+  scale_y_continuous(breaks = NULL, expand = expansion(mult = c(0, 0.1))) +  # Ajusta o espaço acima das barras
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 12, vjust = 0.5, hjust = 0.5),  # Aumenta e ajusta rótulos do eixo X
+    panel.grid.major.y = element_blank(),  # Remove as linhas do grid horizontal
+    plot.title = element_text(hjust = 0.5)
+  ) +
+  scale_fill_manual(
+    values = c("yes" = "lightgreen", "no" = "tomato"),
+    name = "Depósito",
+    labels = c("yes" = "Sim", "no" = "Não")                  
+  ) +
+  scale_x_discrete(
+    labels = c("no" = "Adimplente", "yes" = "Inadimplente")
+  ) 
+
+```
+
+### Percepções das Análises em Relação à Inadimplência
+
+#### Insights:
+
+**Clientes Adimplentes:** Os clientes que não possuem histórico de inadimplência têm uma taxa de adesão ao depósito a prazo de 47,6%. Isso sugere que clientes com um bom histórico financeiro são mais propensos a investir em depósitos a prazo.
+
+**Clientes Inadimplentes:** Aqueles com histórico de inadimplência apresentam uma taxa de adesão ao depósito a prazo significativamente menor, de apenas 31,0%. Isso indica que clientes com problemas financeiros são menos propensos a investir..
+
+**Conclusão Geral:** O histórico de inadimplência é um fator importante na decisão de investir. Clientes com um bom histórico financeiro tendem a ser mais confiantes e dispostos a investir, enquanto aqueles com histórico de inadimplência enfrentam maiores barreiras.
+
+
+### Analisando Clientes que possuem ou não Empréstimo Imobiliário
+
+```{r ANALYZE_8, warning=FALSE}
+
+
+# Calcule a porcentagem de depósitos a prazo por clientes que possuem ou não empréstimo imobiliário
+resultados_housing <- dados_bank %>%
+  group_by(housing_loan) %>%
+  summarise(
+    total = n(),
+    depositaram = sum(deposit == "yes"),
+    nao_depositaram = total - depositaram,
+    porcentagem = (depositaram / total) * 100
+  ) %>% 
+  arrange(desc(porcentagem))
+
+# Exiba os resultados
+print(resultados_housing)
+
+# Reorganizar a variável 'housing_loan' em ordem decrescente
+dados_bank <- dados_bank %>%
+  mutate(housing_loan = fct_infreq(housing_loan))
+
+# Criar o gráfico relacionando clientes que possuem ou não empréstimo imombiliário com o depósito a prazo (coluna target)
+ggplot(dados_bank, aes(x = housing_loan, fill = deposit)) +
+  geom_bar(position = position_dodge(width = 0.9), alpha = 0.8, color = "black") +
+  geom_text(
+    stat = "count", 
+    aes(label = ..count..), 
+    position = position_dodge(width = 0.8), 
+    vjust = -0.5, 
+    size = 4
+  ) +
+  labs(
+    title = "Distribuição por Emppréstimo Imobiliário\n", 
+    x = NULL, 
+    y = NULL  # Remove o rótulo do eixo Y
+  ) +
+  scale_y_continuous(breaks = NULL) +  # Remove os valores no eixo Y
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 12, vjust = 0.9, hjust = 0.5,),  # Aumenta o tamanho e ajusta posição
+    panel.grid.major.y = element_blank(),  # Remove as linhas de grade horizontais
+    axis.title.x = element_text(size = 14),  # Aumenta o título do eixo X, se necessário
+    plot.title = element_text(hjust = 0.5)
+  ) +
+  scale_fill_manual(
+    values = c("yes" = "lightgreen", "no" = "tomato"),
+    name = "Depósito",
+    labels = c("yes" = "Sim", "no" = "Não")                  
+  )  +
+  scale_x_discrete(
+    labels = c("no" = "Sem Empréstimo Imobiliário", "yes" = "Com Empréstimo Imobiliário")
+  )
+
+
+# Calcular as porcentagens relacionando clientes que possuem ou não empréstimo imombiliário com o depósito a prazo (coluna target)
+housing_porcentagem <- dados_bank %>%
+  group_by(housing_loan, deposit) %>%
+  summarise(frequencia = n()) %>%
+  mutate(percentual = frequencia / sum(frequencia) * 100)
+
+print(housing_porcentagem)
+
+# Criar o gráfico com porcentagens relacionando clientes que possuem ou não empréstimo imombiliário com o depósito a prazo (coluna target)
+ggplot(housing_porcentagem, aes(x = housing_loan, y = percentual, fill = deposit)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), alpha = 0.8, color = "black") +
+  geom_text(
+    aes(label = paste0(round(percentual, 1), "%")), 
+    position = position_dodge(width = 0.8), 
+    vjust = -0.5, 
+    size = 4
+  ) +
+  labs(
+    title = "Distribuição por Empréstimo Imobiliário (porcentagem)", 
+    x = NULL, 
+    y = NULL,
+  ) +
+  scale_y_continuous(breaks = NULL, expand = expansion(mult = c(0, 0.1))) +  # Ajusta o espaço acima das barras
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 12, vjust = 0.5, hjust = 0.5),  # Aumenta e ajusta rótulos do eixo X
+    panel.grid.major.y = element_blank(),  # Remove as linhas do grid horizontal
+    plot.title = element_text(hjust = 0.5)
+  ) +
+  scale_fill_manual(
+    values = c("yes" = "lightgreen", "no" = "tomato"),
+    name = "Depósito",
+    labels = c("yes" = "Sim", "no" = "Não")                  
+  )   +
+  scale_x_discrete(
+    labels = c("no" = "Sem Empréstimo Imobiliário", "yes" = "Com Empréstimo Imobiliário")
+  )
+ 
+
+```
+
+### Percepções das Análises em Relação ao Crédito Imobiliário
+
+#### Insights:
+
+**Clientes sem Crédito Imobiliário:** Este grupo apresenta uma taxa de adesão ao depósito a prazo de 57,0%. Isso sugere que clientes sem compromissos financeiros relacionados a imóveis têm maior disponibilidade para investir em opções de longo prazo.
+
+**Clientes com Crédito Imobiliário:** Com uma taxa de adesão ao depósito a prazo de apenas 36,6%, este grupo é menos propenso a investir. .
+
+**Conclusão Geral:** Clientes sem crédito imobiliário são mais propensos a investir, enquanto aqueles com crédito imobiliário tendem a evitar novos compromissos financeiros devido às suas obrigações existentes.
+
+
+### Analisando Clientes que possuem ou não Empréstimo Pessoal
+
+```{r ANALYZE_9, warning=FALSE}
+# Calcular as porcentagens relacionando clientes que possuem ou não empréstimo pessoal com o depósito a prazo (coluna target)
+loan_porcentagem <- dados_bank %>%
+  group_by(loan, deposit) %>%
+  summarise(frequencia = n()) %>%
+  mutate(percentual = frequencia / sum(frequencia) * 100)
+
+print(loan_porcentagem)
+
+# Reorganizar a variável 'loan' em ordem decrescente
+dados_bank <- dados_bank %>%
+  mutate(loan = fct_infreq(loan))
+
+# Criar o gráfico relacionando clientes que possuem ou não empréstimo pessoal com o depósito a prazo (coluna target)
+ggplot(dados_bank, aes(x = loan, fill = deposit)) +
+  geom_bar(position = position_dodge(width = 0.9), alpha = 0.8, color = "black") +
+  geom_text(
+    stat = "count", 
+    aes(label = ..count..), 
+    position = position_dodge(width = 0.8), 
+    vjust = -0.5, 
+    size = 4
+  ) +
+  labs(
+    title = "Distribuição por Empréstimo Pessoal", 
+    x = NULL, 
+    y = NULL  # Remove o rótulo do eixo Y
+  ) +
+  scale_y_continuous(breaks = NULL) +  # Remove os valores no eixo Y
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 12, vjust = 0.9, hjust = 0.5,),  # Aumenta o tamanho e ajusta posição
+    panel.grid.major.y = element_blank(),  # Remove as linhas de grade horizontais
+    axis.title.x = element_text(size = 14),  # Aumenta o título do eixo X, se necessário
+    plot.title = element_text(hjust = 0.5)
+  ) +
+  scale_fill_manual(
+    values = c("yes" = "lightgreen", "no" = "tomato"),
+    name = "Depósito",
+    labels = c("yes" = "Sim", "no" = "Não")                  
+  )  +
+  scale_x_discrete(
+    labels = c("no" = "Sem Empréstimo Pessoal", "yes" = "Com Empréstimo Pessoal")
+  )
+
+
+# Criar o gráfico com porcentagens relacionando clientes que possuem ou não empréstimo pessoal com o depósito a prazo (coluna target)
+ggplot(loan_porcentagem, aes(x = loan, y = percentual, fill = deposit)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), alpha = 0.8, color = "black") +
+  geom_text(
+    aes(label = paste0(round(percentual, 1), "%")), 
+    position = position_dodge(width = 0.8), 
+    vjust = -0.5, 
+    size = 4
+  ) +
+  labs(
+    title = "Distribuição por Empréstimo Pessoal (porcentagem)", 
+    x = NULL, 
+    y = NULL,
+  ) +
+  scale_y_continuous(breaks = NULL, expand = expansion(mult = c(0, 0.1))) +  # Ajusta o espaço acima das barras
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 12, vjust = 0.5, hjust = 0.5),  # Aumenta e ajusta rótulos do eixo X
+    panel.grid.major.y = element_blank(),  # Remove as linhas do grid horizontal
+    plot.title = element_text(hjust = 0.5)
+  ) +
+  scale_fill_manual(
+    values = c("yes" = "lightgreen", "no" = "tomato"),
+    name = "Depósito",
+    labels = c("yes" = "Sim", "no" = "Não")                  
+  )  +
+  scale_x_discrete(
+    labels = c("no" = "Sem Empréstimo Pessoal", "yes" = "Com Empréstimo Pessoal")
+  )
+  
+
+```
+
+### Percepções das Análises em Relação ao Empréstimo Pessoal
+
+#### Insights:
+
+**Clientes sem Empréstimo Pessoal:** Este grupo apresenta uma taxa de adesão ao depósito a prazo de 49,5%.
+
+**Clientes com Empréstimo Pessoal:** Com uma taxa de adesão ao depósito a prazo significativamente menor de 33,2%..
+
+**Conclusão Geral:** Clientes sem empréstimo pessoal são mais propensos a investir em depósitos a prazo, enquanto aqueles com empréstimo pessoal tendem a evitar novos compromissos financeiros devido às suas obrigações existentes.
+
+### Analizando o cruzamento de informações de Estado Civil e Escolaridade
+
+```{r ANALYZE, warning=FALSE, fig.width=12, fig.height=8, out.width='100%' }
+# Calcular as porcentagens relacionando clientes que possuem ou não empréstimo pessoal com o depósito a prazo (coluna target)
+
+# Filtrar os valores da coluna education que não são "unknown"
+dados_education_filtrado <- dados_bank %>%
+  filter(education != "unknown")
+
+
+porcentagem_teste <- dados_education_filtrado %>%
+  group_by(marital_status, education, deposit) %>%
+  summarise(frequencia = n()) %>%
+  mutate(percentual = frequencia / sum(frequencia) * 100)
+
+print(porcentagem_teste)
+
+# Criar o gráfico com porcentagens relacionando clientes que possuem ou não empréstimo pessoal com o depósito a prazo (coluna target)
+ggplot(porcentagem_teste, aes(x = interaction(marital_status, education), y = percentual, fill = deposit)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), alpha = 0.8, color = "black") +
+  geom_text(
+    aes(label = paste0(round(percentual, 1), "%")), 
+    position = position_dodge(width = 0.8), 
+    vjust = -0.5, 
+    size = 3.5
+  ) +
+  labs(
+    title = "Cruzamento de informações de Estado Civil e Escolaridade (porcentagem)", 
+    x = NULL, 
+    y = NULL,
+  ) +
+  scale_y_continuous(breaks = NULL, expand = expansion(mult = c(0, 0.1))) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 60, size = 12, vjust = 0.9, hjust = 0.8),  # Aumenta e ajusta rótulos do eixo X
+    panel.grid.major.y = element_blank(),  # Remove as linhas do grid horizontal
+    plot.title = element_text(size = 16, hjust = 0.5),
+    plot.margin = unit(c(1, 1, 2, 1), "cm")  # Ajusta as margens do gráfico
+  ) +
+  scale_fill_manual(
+    values = c("yes" = "lightgreen", "no" = "tomato"),
+    name = "Depósito",
+    labels = c("yes" = "Sim", "no" = "Não")                  
+  ) +
+  scale_x_discrete(
+    labels = c("married.secondary" = "Casado\nEnsino Médio", "single.secondary" = "Solteiro\nEnsino Médio",
+    "divorced.secondary" = "Divorciado\nEnsino Médio", "married.tertiary" = "Casado\nEnsino Superior",
+    "single.tertiary" = "Solteiro\nEnsino Superior", "divorced.tertiary" = "Divorciado\nEnsino Superior",
+    "married.primary" = "Casado\nEnsino Fundamental", "single.primary" = "Solteiro\nEnsino Fundamental",
+    "divorced.primary" = "Divorciado\nEnsino Fundamental")
+  )
+
+```
+
+### Percepções das Análises do cruzamento de informações de Estado Civil e Escolaridade
+
+#### Insights:
+
+
+**Combinação de Escolaridade e Estado Civil**
+
+- A combinação de solteiros e ensino superior resulta na maior taxa de adesão ao depósito a prazo.
+
+- Casados com ensino fundamental são os menos propensos a investir.
+
+- A interação entre escolaridade e estado civil reforça os padrões observados.   Clientes solteiros e com maior escolaridade têm maior probabilidade de aderir   ao depósito, enquanto casados com menor escolaridade são os menos propensos.
+
+
+### ACT - RECOMENDAÇÕES COM BASE NA ANÁLISE DOS DADOS
+
+### Perfil do Cliente Ideal para Depósito a Prazo
+
+Com base na análise dos dados, identificamos o perfil do cliente com maior propensão a aderir ao depósito a prazo. Esse perfil pode ser utilizado para direcionar as campanhas de marketing e maximizar a eficácia da próxima estratégia. Abaixo, destacamos as características do cliente ideal:
+
+#### Idade
+
+- Clientes Idosos (60 a 95 anos):
+- Jovens (18 a 23 anos):
+
+#### Profissão
+
+- Estudantes e Aposentados:
+
+#### Estado Civil
+
+- Solteiros:
+
+#### Escolaridade
+
+- Ensino Superior:
+
+
+#### Saldo Bancário
+
+- Clientes com Saldos Mais Altos:
+
+
+#### Histórico Financeiro
+
+- Clientes Adimplentes, que não possuem Empréstimos pessoais e imobiliários
+
+
+### Recomendações para a Próxima Campanha
+
+#### Foco nos Grupos com Maior Propensão:
+
+- Priorize os clientes que com o perfil recomendado pela análise dos dados.
+- Desenvolva mensagens que ressaltem a segurança, a rentabilidade e a facilidade de acesso ao depósito a prazo.
+- Personalização da abordagem para os diferentes perfis de clientes, por exemplo jovens e idosos.
+
+
+#### Educação Financeira:
+
+- Implemente programas de educação financeira para aumentar a compreensão e o interesse de clientes com menor propensão a investir, como casados e clientes com ensino médio ou fundamental.
+
